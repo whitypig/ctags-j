@@ -985,13 +985,13 @@ static void addOtherFields (tagEntryInfo* const tag, const tagType type,
 		case TAG_FUNCTION:
 		case TAG_METHOD:
 		case TAG_PROTOTYPE:
-			if (vStringLength (Signature) > 0) 
+			if (vStringLength (Signature) > 0)
 			{
 				tag->extensionFields.signature = vStringValue (Signature);
 			}
 
-			if (vStringLength (ReturnType) > 0) 
-			{				
+			if (vStringLength (ReturnType) > 0)
+			{
 				tag->extensionFields.returnType = vStringValue (ReturnType);
 			}
 		case TAG_CLASS:
@@ -1166,7 +1166,7 @@ static void makeTag (const tokenInfo *const token,
 
 		findScopeHierarchy (scope, st);
 		addOtherFields (&e, type, st, scope, typeRef);
-		
+
 		makeTagEntry (&e);
 		makeExtraTagEntry (type, &e, scope);
 		vStringDelete (scope);
@@ -1387,7 +1387,7 @@ static void skipToMatch (const char *const pair)
 	{
 		if (CollectingSignature)
 			vStringPut (Signature, c);
-		
+
 
 		if (c == begin)
 		{
@@ -1529,7 +1529,7 @@ static void readPackageName (tokenInfo *const token, const int firstChar)
 static void readPackageOrNamespace (statementInfo *const st, const declType declaration)
 {
 	st->declaration = declaration;
-	
+
 	if (declaration == DECL_NAMESPACE && !isLanguage (Lang_csharp))
 	{
 		/* In C++ a namespace is specified one level at a time. */
@@ -1774,10 +1774,10 @@ static void processToken (tokenInfo *const token, statementInfo *const st)
 		case KEYWORD_VOLATILE:  st->declaration = DECL_BASE;            break;
 		case KEYWORD_VIRTUAL:   st->implementation = IMP_VIRTUAL;       break;
 		case KEYWORD_WCHAR_T:   st->declaration = DECL_BASE;            break;
-		
+
 		case KEYWORD_NAMESPACE: readPackageOrNamespace (st, DECL_NAMESPACE); break;
 		case KEYWORD_PACKAGE:   readPackageOrNamespace (st, DECL_PACKAGE);   break;
-		
+
 		case KEYWORD_EVENT:
 			if (isLanguage (Lang_csharp))
 				st->declaration = DECL_EVENT;
@@ -2085,7 +2085,7 @@ static void processAngleBracket (void)
 			cppUngetc (c);
 		}
 	} else {
-		cppUngetc (c);		
+		cppUngetc (c);
 	}
 }
 
@@ -2099,7 +2099,7 @@ static void parseJavaAnnotation (statementInfo *const st)
 	 * But watch out for "@interface"!
 	 */
 	tokenInfo *const token = activeToken (st);
-	
+
 	int c = skipToNonWhite ();
 	readIdentifier (token, c);
 	if (token->keyword == KEYWORD_INTERFACE)
@@ -2119,23 +2119,23 @@ static void parseReturnType (statementInfo *const st)
 	int i;
 	int lower_bound;
 	tokenInfo * finding_tok;
-	
+
 	/* FIXME TODO: if java language must be supported then impement this here
 	 * removing the current FIXME */
 	if (!isLanguage (Lang_c) && !isLanguage (Lang_cpp))
-	{		
+	{
 		return;
 	}
-	
-	vStringClear (ReturnType);	
+
+	vStringClear (ReturnType);
 
 	finding_tok = prevToken (st, 1);
-	
+
 	if (isType (finding_tok, TOKEN_NONE))
 		return;
-	
+
 	finding_tok = prevToken (st, 2);
-		
+
 	if (finding_tok->type == TOKEN_DOUBLE_COLON)
 	{
 		/* get the total number of double colons */
@@ -2159,11 +2159,11 @@ static void parseReturnType (statementInfo *const st)
 	}
 	else
 		lower_bound = 1;
-	
+
 	for (i = (unsigned int) NumTokens;  i > lower_bound;  i--)
 	{
 		tokenInfo * curr_tok;
-		curr_tok = prevToken (st, i);	
+		curr_tok = prevToken (st, i);
 
 		switch (curr_tok->type)
 		{
@@ -2171,10 +2171,10 @@ static void parseReturnType (statementInfo *const st)
 			case TOKEN_NONE:
 				continue;
 				break;
-			
+
 			case TOKEN_DOUBLE_COLON:
 				/* usually C++ class scope */
-				vStringCatS (ReturnType, "::");				
+				vStringCatS (ReturnType, "::");
 				break;
 
 			case TOKEN_STAR:
@@ -2189,10 +2189,10 @@ static void parseReturnType (statementInfo *const st)
 
 			case TOKEN_KEYWORD:
 				vStringPut (ReturnType, ' ');
-				
+
 			default:
 				vStringCat (ReturnType, curr_tok->name);
-				break;				
+				break;
 		}
 	}
 
@@ -2209,7 +2209,7 @@ static void parseReturnType (statementInfo *const st)
 	printf ("~~~~~ statement ---->\n");
 	ps (st);
 	printf ("NumTokens: %d\n", NumTokens);
-	printf ("FOUND ReturnType: %s\n", vStringValue (ReturnType));	
+	printf ("FOUND ReturnType: %s\n", vStringValue (ReturnType));
 	printf ("<~~~~~\n");
 	//*/
 }
@@ -2599,7 +2599,7 @@ static void parseIdentifier (statementInfo *const st, const int c)
 static void parseGeneralToken (statementInfo *const st, const int c)
 {
 	const tokenInfo *const prev = prevToken (st, 1);
-	
+
 	if (isident1 (c) || (isLanguage (Lang_java) && isHighChar (c)))
 	{
 		parseIdentifier (st, c);
@@ -2652,12 +2652,12 @@ static void nextToken (statementInfo *const st)
 			/* analyze functions and co */
 			case '(': analyzeParens (st);						break;
 			case '<': processAngleBracket ();                   break;
-			case '*': 
+			case '*':
 				st->haveQualifyingName = FALSE;
 				setToken (st, TOKEN_STAR);
 				break;
 			case '&': setToken (st, TOKEN_AMPERSAND);			break;
-				
+
 			case ',': setToken (st, TOKEN_COMMA);               break;
 			case ':': processColon (st);                        break;
 			case ';': setToken (st, TOKEN_SEMICOLON);           break;
@@ -2885,7 +2885,7 @@ static void createTags (const unsigned int nestLevel,
 
 		nextToken (st);
 		token = activeToken (st);
-		
+
 		if (isType (token, TOKEN_BRACE_CLOSE))
 		{
 			if (nestLevel > 0)
