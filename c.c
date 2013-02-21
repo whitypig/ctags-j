@@ -2114,6 +2114,25 @@ static void parseJavaAnnotation (statementInfo *const st)
 	}
 }
 
+static boolean isIgnoreReturnTypeKeyword(keywordId keyword)
+{
+	switch (keyword)
+	{
+		case KEYWORD_ATTRIBUTE:
+		case KEYWORD_EXPLICIT:
+		case KEYWORD_EXTERN:
+		case KEYWORD_FRIEND:
+		case KEYWORD_INLINE:
+		case KEYWORD_TEMPLATE:
+		case KEYWORD_TYPENAME:
+		case KEYWORD_VIRTUAL:
+			return TRUE;
+
+		default:
+			return FALSE;
+	}
+}
+
 static void parseReturnType (statementInfo *const st)
 {
 	int i;
@@ -2160,7 +2179,8 @@ static void parseReturnType (statementInfo *const st)
 	else
 		lower_bound = 1;
 
-	for (i = (unsigned int) NumTokens;  i > lower_bound;  i--)
+	boolean isPrevDoubleColon = FALSE;
+	for (i = (unsigned int) NumTokens - 1;  i > lower_bound;  i--)
 	{
 		tokenInfo * curr_tok;
 		curr_tok = prevToken (st, i);
@@ -2175,6 +2195,7 @@ static void parseReturnType (statementInfo *const st)
 			case TOKEN_DOUBLE_COLON:
 				/* usually C++ class scope */
 				vStringCatS (ReturnType, "::");
+				isPrevDoubleColon = TRUE;
 				break;
 
 			case TOKEN_STAR:
@@ -2188,10 +2209,17 @@ static void parseReturnType (statementInfo *const st)
 				break;
 
 			case TOKEN_KEYWORD:
-				vStringPut (ReturnType, ' ');
+				if (isIgnoreReturnTypeKeyword(curr_tok->keyword))
+					continue;
 
 			default:
+				/* if previous token is `::', we have to concatenate `::' and curr_toke->name. */
+				if (isPrevDoubleColon == FALSE)
+				{
+					vStringPut (ReturnType, ' ');
+				}
 				vStringCat (ReturnType, curr_tok->name);
+				isPrevDoubleColon = FALSE;
 				break;
 		}
 	}
