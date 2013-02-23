@@ -2133,7 +2133,80 @@ static boolean isIgnoreReturnTypeKeyword(keywordId keyword)
 	}
 }
 
+static void parseReturnTypeC (statementInfo *const st);
+static void parseReturnTypeJava (statementInfo *const st);
+
 static void parseReturnType (statementInfo *const st)
+{
+	if (isLanguage(Lang_c) || isLanguage(Lang_cpp))
+	{
+		parseReturnTypeC(st);
+	}
+	else if (isLanguage(Lang_java))
+	{
+		parseReturnTypeJava(st);
+	}
+}
+
+static boolean isJavaTypeKeyword (const tokenInfo const *token)
+{
+	switch (token->keyword) {
+		case KEYWORD_BOOLEAN:
+		case KEYWORD_BYTE:
+		case KEYWORD_CHAR:
+		case KEYWORD_DOUBLE:
+		case KEYWORD_FLOAT:
+		case KEYWORD_INT:
+		case KEYWORD_LONG:
+		case KEYWORD_SHORT:
+		case KEYWORD_VOID:
+			return TRUE;
+
+		default:
+			return FALSE;
+	}
+}
+
+static void parseReturnTypeJava (statementInfo *const st)
+{
+	/* int i; */
+	const tokenInfo *token = prevToken (st, 1);
+
+	if (isType (token, TOKEN_NONE)) return;
+
+	/* ReturnType is a static variable. */
+	vStringClear (ReturnType);
+	/* for (i = 0;  i < NumTokens;  i++) { */
+	/* 	fprintf (stderr, "DEBUG: i=%d, name=%s\n", i, prevToken (st, i)->name->buffer); */
+	/* } */
+	token = prevToken (st, 2);
+	switch (token->type) {
+	  case TOKEN_NONE:
+			break;
+	  case TOKEN_KEYWORD:
+			/* we ignore keywords like public, final, and so on. */
+			if (isJavaTypeKeyword (token))
+			{
+				/* this is int, double, float, and so on. */
+				vStringCat (ReturnType, token->name);
+				/* fprintf (stderr, "DEBUG: parseReturnTypeJava(), keyword=%s\n", */
+				/* 				 vStringValue (token->name)); */
+			}
+			break;
+
+	  default:
+			vStringCat (ReturnType, token->name);
+			/* fprintf (stderr, "DEBUG: parseReturnTypeJava(), name=%s, keyword=%d\n", */
+			/* 				 vStringValue (token->name), */
+			/* 				 token->keyword); */
+			break;
+	}
+
+	vStringTerminate (ReturnType);
+	return;
+}
+
+static void parseReturnTypeC (statementInfo *const st)
 {
 	int i;
 	int lower_bound;
