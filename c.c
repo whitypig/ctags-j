@@ -860,7 +860,12 @@ static javaKind javaTagKind (const tagType type)
 		case TAG_METHOD:     result = JK_METHOD;        break;
 		case TAG_PACKAGE:    result = JK_PACKAGE;       break;
 
-		default: Assert ("Bad Java tag type" == NULL); break;
+		default:
+#ifdef DEBUG
+			fprintf (stderr, "type=%d\n", type);
+#endif
+      Assert ("Bad Java tag type" == NULL);
+      break;
 	}
 	return result;
 }
