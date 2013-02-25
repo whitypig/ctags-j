@@ -58,7 +58,8 @@ SOURCES = \
 	vim.c \
 	yacc.c \
 	vstring.c \
-	kanji.c
+	kanji.c \
+    debug.c
 
 ENVIRONMENT_HEADERS = \
     e_amiga.h e_djgpp.h e_mac.h e_msoft.h e_os2.h e_qdos.h e_riscos.h e_vms.h
@@ -121,4 +122,5 @@ OBJECTS = \
 	vim.$(OBJEXT) \
 	yacc.$(OBJEXT) \
 	vstring.$(OBJEXT) \
-	kanji.$(OBJEXT)
+	kanji.$(OBJEXT) \
+    debug.$(OBJEXT)
