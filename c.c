@@ -861,7 +861,7 @@ static javaKind javaTagKind (const tagType type)
 		case TAG_PACKAGE:    result = JK_PACKAGE;       break;
 
 		default:
-      Assert ("Bad Java tag type" == NULL);
+			Assert ("Bad Java tag type" == NULL);
       break;
 	}
 	return result;
