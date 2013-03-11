@@ -2130,6 +2130,7 @@ static boolean isIgnoreReturnTypeKeyword(keywordId keyword)
 		case KEYWORD_INLINE:
 		case KEYWORD_TEMPLATE:
 		case KEYWORD_TYPENAME:
+		case KEYWORD_USING:
 		case KEYWORD_VIRTUAL:
 			return TRUE;
 
