@@ -861,9 +861,6 @@ static javaKind javaTagKind (const tagType type)
 		case TAG_PACKAGE:    result = JK_PACKAGE;       break;
 
 		default:
-#ifdef DEBUG
-			fprintf (stderr, "type=%d\n", type);
-#endif
       Assert ("Bad Java tag type" == NULL);
       break;
 	}
