@@ -48,7 +48,7 @@
 *   DATA DECLARATIONS
 */
 
-enum { NumTokens = 15 };
+enum { NumTokens = 3 };
 
 typedef enum eException {
 	ExceptionNone, ExceptionEOF, ExceptionFormattingError,
@@ -567,7 +567,7 @@ static const char *implementationString (const impType imp)
 /*
 *   Debugging functions
 */
-#define DEBUG
+
 #ifdef DEBUG
 
 #define boolString(c)   ((c) ? "TRUE" : "FALSE")
@@ -1387,8 +1387,6 @@ static void skipToMatch (const char *const pair)
 	{
 		if (CollectingSignature)
 			vStringPut (Signature, c);
-
-
 		if (c == begin)
 		{
 			++matchLevel;
@@ -2875,7 +2873,6 @@ static void nest (statementInfo *const st, const unsigned int nestLevel)
 		case DECL_FUNCTION:
 		case DECL_TASK:
 			st->inFunction = TRUE;
-
 			/* fall through */
 		default:
 			if (includeTag (TAG_LOCAL, FALSE))
@@ -2987,7 +2984,6 @@ static void createTags (const unsigned int nestLevel,
 
 		nextToken (st);
 		token = activeToken (st);
-
 		if (isType (token, TOKEN_BRACE_CLOSE))
 		{
 			if (nestLevel > 0)
@@ -3016,10 +3012,10 @@ static void createTags (const unsigned int nestLevel,
 	DebugStatement ( if (nestLevel > 0) debugParseNest (FALSE, nestLevel - 1); )
 }
 
-static boolean findCTags (const unsigned int passCount)
+static rescanReason findCTags (const unsigned int passCount)
 {
 	exception_t exception;
-	boolean retry;
+	rescanReason rescan;
 
 	Assert (passCount < 3);
 	cppInit ((boolean) (passCount > 1), isLanguage (Lang_csharp));
@@ -3027,7 +3023,7 @@ static boolean findCTags (const unsigned int passCount)
 	ReturnType = vStringNew ();
 
 	exception = (exception_t) setjmp (Exception);
-	retry = FALSE;
+	rescan = RESCAN_NONE;
 	if (exception == ExceptionNone)
 		createTags (0, NULL);
 	else
@@ -3035,15 +3031,15 @@ static boolean findCTags (const unsigned int passCount)
 		deleteAllStatements ();
 		if (exception == ExceptionBraceFormattingError  &&  passCount == 1)
 		{
-			retry = TRUE;
-		   verbose ("%s: retrying file with fallback brace matching algorithm\n",
+			rescan = RESCAN_FAILED;
+			verbose ("%s: retrying file with fallback brace matching algorithm\n",
 					getInputFileName ());
 		}
 	}
 	vStringDelete (Signature);
 	vStringDelete (ReturnType);
 	cppTerminate ();
-	return retry;
+	return rescan;
 }
 
 static void buildKeywordHash (const langType language, unsigned int idx)
