@@ -2145,6 +2145,9 @@ static void parseReturnType (statementInfo *const st)
 	{
 		parseReturnTypeJava(st);
 	}
+  else if (isObjC()) {
+    parseReturnTypeC(st);
+  }
 }
 
 static boolean isJavaTypeKeyword (const tokenInfo const *token)
@@ -2211,15 +2214,7 @@ static void parseReturnTypeC (statementInfo *const st)
 	int lower_bound;
 	tokenInfo * finding_tok;
 
-	/* FIXME TODO: if java language must be supported then impement this here
-	 * removing the current FIXME */
-	if (!isLanguage (Lang_c) && !isLanguage (Lang_cpp))
-	{
-		return;
-	}
-
 	vStringClear (ReturnType);
-
 	finding_tok = prevToken (st, 1);
 
 	if (isType (finding_tok, TOKEN_NONE))
@@ -2290,11 +2285,23 @@ static void parseReturnTypeC (statementInfo *const st)
 				{
 					vStringPut (ReturnType, ' ');
 				}
+        /* isObjC() and isObjCKeyword are defined in objc.c */
+        if (isObjC() && isObjCKeyword(vStringValue(curr_tok->name))) {
+          /* workaround to avoid including "end" and "implementation" and so on in ReturnType. */
+          break;
+        }
 				vStringCat (ReturnType, curr_tok->name);
 				isPrevDoubleColon = FALSE;
 				break;
 		}
 	}
+  if (isObjC()) {
+    extern const char *processObjCReturnType(const char*);
+    const char *processedReturnType = processObjCReturnType(vStringValue(ReturnType));
+    vStringClear(ReturnType);
+    vStringCatS(ReturnType, processedReturnType);
+    vStringTerminate(ReturnType);
+  }
 
 	/* clear any white space from the front */
 	vStringStripLeading (ReturnType);
@@ -2326,6 +2333,10 @@ static int parseParens (statementInfo *const st, parenInfo *const info)
 	vStringClear (Signature);
 	vStringPut (Signature, '(');
 	info->parameterCount = 1;
+#ifdef DEBUG
+  ps(st);
+  printf("\n");
+#endif
 	do
 	{
 		int c = skipToNonWhite ();

@@ -46,6 +46,9 @@ static kindOption ObjCKinds [] = {
 	{ TRUE, 'Z', "pmethod", "protocol methods" }
 };
 
+static vString *ReturnType;
+static vString *Signature;
+
 struct handlerType {
 	const char *name;
 	void (*handler)(const char *keyword);
@@ -335,12 +338,36 @@ static void emitObjCTag(const char *name, objcKind type, const char *scope, cons
 		switch(type) {
 			case K_PMETHOD:
 				tag.extensionFields.scope[0] = "protocol";
+        if (vStringLength(ReturnType) > 0) {
+          tag.extensionFields.returnType = eStrdup(vStringValue(ReturnType));
+          vStringClear(ReturnType);
+        }
+        if (vStringLength(Signature) > 0) {
+          tag.extensionFields.signature = eStrdup(vStringValue(Signature));
+          vStringClear(Signature);
+        }
 				break;
 			case K_INTMETHOD:
 				tag.extensionFields.scope[0] = "interface";
+        if (vStringLength(ReturnType) > 0) {
+          tag.extensionFields.returnType = eStrdup(vStringValue(ReturnType));
+          vStringClear(ReturnType);
+        }
+        if (vStringLength(Signature) > 0) {
+          tag.extensionFields.signature = eStrdup(vStringValue(Signature));
+          vStringClear(Signature);
+        }
 				break;
 			case K_IMPMETHOD:
 				tag.extensionFields.scope[0] = "implementation";
+        if (vStringLength(ReturnType) > 0) {
+          tag.extensionFields.returnType = eStrdup(vStringValue(ReturnType));
+          vStringClear(ReturnType);
+        }
+        if (vStringLength(Signature) > 0) {
+          tag.extensionFields.signature = eStrdup(vStringValue(Signature));
+          vStringClear(Signature);
+        }
 				break;
 			default:
 				tag.extensionFields.scope[0] = "unknown";
@@ -362,32 +389,76 @@ static void getSingleObjCMethod(vString *method)
 	int z;
 	int skipNextIdent;
 	const char *temp;
+  const char *returnTypeOrArg = NULL;
+  boolean returnTypeDone = FALSE;
+  boolean methodDone = FALSE;
+  boolean inSignature = FALSE;
 
 	vStringClear(method);
+  vStringClear(ReturnType);
+  vStringClear(Signature);
+
 	recordPosition();
 	z = cppGetc();
 	vStringPut(method, z);
 	skipNextIdent = 0;
+  vStringPut(Signature, '(');
 	while ((z = cppGetc()) != EOF && z != ';' && z != '{') {
 		if (isspace(z))
 			continue;
 		else if (z == '(') {
 			cppUngetc(z);
-			readToMatchingBrace(&z);
-		}
+      returnTypeOrArg = readToMatchingBrace(&z);
+      /* skip over an opening curly brace */
+      if (*returnTypeOrArg == '(') {
+        returnTypeOrArg++;
+      }
+      if (returnTypeDone == FALSE) {
+        vStringCatS(ReturnType, returnTypeOrArg);
+        /* fprintf(stderr, "DEBUG: ReturnType=%s\n", vStringValue(ReturnType)); */
+        vStringTerminate(ReturnType);
+        returnTypeDone = TRUE;
+      }
+      else {
+        vStringCatS(Signature, returnTypeOrArg);
+        inSignature = TRUE;
+      }
+    }
 		else if (z == ':') {
 			vStringPut(method, z);
+      if (inSignature) {
+        vStringPut(Signature, z);
+      }
 			skipNextIdent = 1;
 		}
 		else if (myIsIdentifier(z, 0)) {
 			cppUngetc(z);
 			temp = readToNonIdentifier(0);
+      if (inSignature) {
+        vStringPut(Signature, ' ');
+        vStringCatS(Signature, temp);
+        vStringCatS(Signature, ", ");
+        inSignature = FALSE;
+      }
+      else if (methodDone) {
+        vStringCatS(Signature, temp);
+        inSignature = TRUE;
+      }
 			if (skipNextIdent)
 				skipNextIdent = 0;
-			else
+			else {
 				vStringCatS(method, temp);
+        methodDone = TRUE;
+      }
 		}
 	}
+  if (vStringLast(Signature) == ' ') {
+    /* remove trailing ', ' and ' ' */
+    vStringChop(Signature);
+    vStringChop(Signature);
+  }
+  vStringPut(Signature, ')');
+  vStringTerminate(Signature);
 	cppUngetc(z);
 	vStringPut(method, 0);
 }
@@ -401,6 +472,7 @@ static void readObjCMethods(objcKind mType, const char *scope, const char *inher
 	int z;
 	const char *temp;
 	vString *method = vStringNew();
+  int c;
 
 	while (1) {
 		z = skipToNonWhite();
@@ -588,10 +660,12 @@ static void implementationHandler(const char *keyword)
 static rescanReason findObjCOrObjCppTags (const unsigned int passCount,
         parserDefinition *baseParser)
 {
+  int z;
 	if (passCount == 1) {
 		cppInit(0, 0);
-
-		while (skipToObjCKeyword() != EOF) {
+    ReturnType = vStringNew();
+    Signature = vStringNew();
+		while ((z = skipToObjCKeyword()) != EOF) {
 			struct handlerType *iter;
 			char *keyword;
 
@@ -606,6 +680,8 @@ static rescanReason findObjCOrObjCppTags (const unsigned int passCount,
 
 			eFree(keyword);
 		}
+    vStringDelete(Signature);
+    vStringDelete(ReturnType);
 
 		cppTerminate ();
 	} else {
@@ -661,6 +737,182 @@ extern parserDefinition* ObjCppParser (void)
 	def->extensions = extensions;
 	def->parser2     = findObjCppTags;
 	return def;
+}
+
+extern boolean isObjC()
+{
+  return getNamedLanguage("ObjC") == File.source.language;
+}
+
+extern boolean isObjCKeyword(const char *word)
+{
+  const char const *keywords[] = { "end",
+                                   "extern",
+                                   "implementation",
+                                   "interface",
+                                   "protocol",
+                                   "static",
+                                   NULL, };
+  const char **p = NULL;
+  for (p = keywords; *p != NULL; ++p) {
+    if (strcmp(*p, word) == 0) {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Split str with delimiter.
+ * Return an array of splitted strings, which is NULL-terminated.
+ * You have to call split_str_free to deallocate a returned value.
+ */
+extern char **str_split(const char *str, const char *delimiter)
+{
+  int i;
+  char *buf = NULL;
+  char **ret = NULL;
+  char *p = NULL;
+
+  /* allocate buffer so that we will NOT destory the original string. */
+  buf = eMalloc(strlen(str) + 1);
+  strcpy(buf, str);
+
+  p = strtok(buf, delimiter);
+  i = 0;
+  while (p != NULL) {
+    ret = eRealloc(ret, (i + 1) * sizeof(*ret));
+    ret[i] = eMalloc(strlen(p) + 1);
+    strcpy(ret[i], p);
+    ++i;
+    p = strtok(NULL, delimiter);
+  }
+  /* terminate ret with NULL */
+  ret = eRealloc(ret, (i + 1) * sizeof(*ret));
+  ret[i] = NULL;
+
+  eFree(buf);
+  buf = NULL;
+
+  return ret;
+}
+
+/**
+ * Deallocate each element of sarray and sarray itself.
+ */
+extern void str_split_free(char **sarray)
+{
+  int i;
+  for (i = 0; sarray[i] != NULL; ++i) {
+    eFree(sarray[i]);
+    sarray[i] = NULL;
+  }
+  eFree(sarray);
+}
+
+/**
+ * Concate strings and between.
+ * Return a concatenated string.
+ * That is to say,
+ * return "strings[0]""between""strings[1]""between""strings[2]",
+ * if the length of strings is 3.
+ * strings should be NULL-terminated.
+ * Also you have to free a returned string by yourself.
+ */
+extern char *str_concat(char **strings, const char *between)
+{
+  int len = 0, i, n;
+  int len_between = strlen(between);
+  char *ret = NULL, *p = NULL;
+
+  for (i = 0, n = 0; strings[i] != NULL; ++i, ++n) {
+    len += strlen(strings[i]);
+    len += len_between;
+  }
+  len -= len_between;
+  /* for null character */
+  ++len;
+
+  ret = malloc(sizeof(char) * len);
+  memset(ret, '\0', len);
+  for (i = 0, p = ret; i < n; ++i) {
+    strcpy(p, strings[i]);
+    p += strlen(strings[i]);
+    if ((i + 1) < n) {
+      strcpy(p, between);
+      p += len_between;
+    }
+  }
+
+  return ret;
+}
+
+extern const char *processObjCReturnType(const char *returnType)
+{
+  char **types = str_split(returnType, " ");
+  int i, j, numTypes;
+  int len = strlen(returnType) + 1;
+  char *buf = NULL;
+  boolean voidFound = FALSE, constFound = FALSE, someTypeFound = FALSE;
+  const char *newReturnType = NULL;
+
+  buf = eMalloc(len);
+  memset(buf, '\0', len);
+
+  /* count the elements of types */
+  for (i = 0, numTypes = 0; types[i] != NULL; ++i, ++numTypes) {
+    /* fprintf(stderr, "DEBUG: types[%d]=%s\n", i, types[i]); */
+  }
+
+  for (i = numTypes - 1; i >= 0; --i) {
+    if (strcmp(types[i], "void") == 0) {
+      voidFound = TRUE;
+    }
+    else if (strcmp(types[i], "void*") == 0) {
+      voidFound = TRUE;
+    }
+    else if (strcmp(types[i], "const") == 0) {
+      constFound = TRUE;
+      /* We ignore strings before "const" */
+      while (--i >= 0) {
+        eFree(types[i]);
+        types[i] = NULL;
+      }
+      break;
+    }
+    else if (strcmp(types[i], "*") == 0) {
+      /* do nothing */
+    }
+    else {
+      if (voidFound || constFound) {
+        eFree(types[i]);
+        types[i] = NULL;
+      }
+      else {
+        someTypeFound = TRUE;
+      }
+    }
+  }
+  /* move elements to the left */
+  for (i = 0; i < numTypes - 1; ++i) {
+    if (types[i] != NULL) {
+      continue;
+    }
+    else {
+      /* move a string into types[i] */
+      for (j = i + 1; j < numTypes; ++j) {
+        if (types[j] != NULL) {
+          types[i] = types[j];
+          types[j] = NULL;
+          break;
+        }
+      }
+    }
+  }
+  newReturnType = str_concat(types, " ");
+  str_split_free(types);
+  eFree(buf);
+  return newReturnType;
 }
 
 /* vi:set tabstop=4 shiftwidth=4: */
