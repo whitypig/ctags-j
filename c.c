@@ -2333,10 +2333,6 @@ static int parseParens (statementInfo *const st, parenInfo *const info)
 	vStringClear (Signature);
 	vStringPut (Signature, '(');
 	info->parameterCount = 1;
-#ifdef DEBUG
-  ps(st);
-  printf("\n");
-#endif
 	do
 	{
 		int c = skipToNonWhite ();
